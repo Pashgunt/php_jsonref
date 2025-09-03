@@ -1,0 +1,8 @@
+*.o
+*.lo
+*.la
+.libs/
+*.so
+.idea
+.vscode
+/build
