@@ -26,7 +26,7 @@
 ### 📦 Source code build
 
 ```bash
-git clone https://github.com/yourname/php_jsonref.git
+git clone https://github.com/Pashgunt/php_jsonref.git
 cd php_jsonref
 mkdir build && cd build
 cmake ..
