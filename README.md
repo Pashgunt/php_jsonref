@@ -28,13 +28,19 @@
 
 ### Source code build
 
+1. **Check the installation of packages**
+- `cmake`
+- `make`
+- `jansson (macOS) / libjansson-dev (Ubuntu/Debian)`
+
+2. **Install**
 ```bash
 git clone https://github.com/Pashgunt/php_jsonref.git
 cd php_jsonref
 make install
 ```
 
-Add to `php.ini`:
+3. **Add to** `php.ini`:
 ```ini
 extension=jsonref.so
 ```
