@@ -12,6 +12,7 @@
 
 static int le_compiled_path;
 #define LE_COMPILED_PATH "compiled_path"
+#define UNUSED(x) (void)(x)
 
 typedef struct {
     char *json_str;
@@ -52,6 +53,8 @@ static void php_jsonref_compiled_path_dtor(zend_resource *rsrc)
 
 PHP_MINIT_FUNCTION(jsonref)
 {
+    UNUSED(type);
+
     le_compiled_path = zend_register_list_destructors_ex(
         php_jsonref_compiled_path_dtor,
         NULL,
@@ -464,6 +467,8 @@ PHP_FUNCTION(json_compile_path)
 
 PHP_FUNCTION(json_free_compiled)
 {
+    UNUSED(return_value);
+
     zval *compiled_zv;
 
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "r", &compiled_zv) == FAILURE) {
@@ -475,6 +480,9 @@ PHP_FUNCTION(json_free_compiled)
 
 PHP_RSHUTDOWN_FUNCTION(jsonref)
 {
+    UNUSED(type);
+    UNUSED(module_number);
+
     cleanup_json_cache();
 
     return SUCCESS;
