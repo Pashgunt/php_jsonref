@@ -1,4 +1,4 @@
-# 🧩 PHP Extension JSON REF
+# PHP Extension JSON REF
 ![PHP version](https://img.shields.io/badge/php-%3E=8.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
@@ -8,30 +8,30 @@
 
 ---
 
-## 📌 It is important to understand
+## It is important to understand
 
-### ✅ Where it helps:
+### Where it helps (see benchmarks):
 
-- High performance, no array/object is created in PHP memory, json_decode() is not used
-- Lower memory consumption, suitable for large JSON (for example, >100 MB) that do not fit into memory after json_decode()
-- Direct editing, changes are applied directly to the string, without serialization/deserialization
-- Dot notation support,Full access to nested fields: a.b.c.d
-- Auto-creation of paths, with json_set, nested objects are created automatically if they do not exist
-- Security, no creation of PHP objects from JSON — fewer vulnerabilities (for example, when working with untrusted data)
+- You often need to read random fields from a large JSON
+  API, where 90% of operations are data reads
+- Work with configurations, templates, cached structures
+- Partial data update (patch operations)
+- High-load systems
+- Working with large JSON documents (10+ MB)
+- Counters, increments, complex calculations based on current values
+- Transactional operations with JSON (read → checked → changed)
+- The real world: 90% of the business logic is exactly like that
 
 ---
 
-## 🚀 Install
+## Install
 
-### 📦 Source code build
+### Source code build
 
 ```bash
 git clone https://github.com/Pashgunt/php_jsonref.git
 cd php_jsonref
-mkdir build && cd build
-cmake ..
-make
-sudo make install
+make install
 ```
 
 Add to `php.ini`:
@@ -39,7 +39,7 @@ Add to `php.ini`:
 extension=jsonref.so
 ```
 
-### 🐘 (Future) Install from PECL
+### Install from PECL
 
 ```bash
 pecl install jsonref
@@ -47,70 +47,99 @@ pecl install jsonref
 
 ---
 
-## ✏️ Examples and result primitive benchmarks
+## Structure of functions
 
-```php
-$bigData = [
-    'users' => []
-];
+1. `json_get(string $json, string $pathFieldInJson): mixed`
+    - `$json` - the structure of the json file as a string
+    - `$pathFieldInJson` - path to the property whose value you need to get
+2. `json_set(string $json, string $pathFieldInJson, mixed $value): void`
+    - `$json` - the structure of the json file as a string
+    - `$pathFieldInJson` - path to the property whose value you need to change
+    - `$value` - a new value that needs to be set
 
-for ($i = 0; $i < 50000; $i++) {
-    $bigData['users'][] = [
-        'id' => $i,
-        'name' => "User$i",
-        'age' => rand(18, 80),
-        'email' => "user$i@example.com",
-        'tags' => ['tag1', 'tag2', 'tag3'],
-    ];
-}
+---
 
-$bigJson = json_encode($bigData, JSON_UNESCAPED_UNICODE);
-$iterations = 10;
+## Benchmark
 
-function benchmark_jsonref($json, $iterations) {
-    $timeStart = microtime(true);
+![all.png](docs/img/all.png)
+![avg.png](docs/img/avg.png)
 
-    for ($i = 0; $i < $iterations; $i++) {
-        $age = json_get($json, 'users.1000.age');
-        $json = json_set($json, 'users.1000.age', $age + 1);
-    }
+### Performance comparison with JSON: Reference vs Decode/Encode
 
-    return microtime(true) - $timeStart;
-}
+### Description of the tests
 
-function benchmark_json_decode_encode($json, $iterations) {
-    $timeStart = microtime(true);
+1. **benchJsonRefReadOnly**
+   - **Action:** only reading one field via `json_get` along the way.
+   - **Meaning:** checks the speed of reading a single value from JSON without decoding the entire object.
 
-    for ($i = 0; $i < $iterations; $i++) {
-        $data = json_decode($json, true);
-        $data['users'][1000]['age'] += 1;
-        $json = json_encode($data, JSON_UNESCAPED_UNICODE);
-    }
+2. **benchJsonEncodeDecodeReadOnly**
+   - **Action:** complete decoding into an array and reading the field.
+   - **Meaning:** shows the overhead of the full `json_decode`.
 
-    return microtime(true) - $timeStart;
-}
+3. **benchJsonRefChangeOnly**
+   - **Action:** only changing one field via 'json_set'.
+   - **Meaning:** checks the rate of JSON point change without reassembling the entire object.
 
-echo "Starting benchmarks...\n";
+4. **benchJsonEncodeDecodeChangeOnly**
+   - **Action:** Decoding, field modification, reverse encoding.
+   - **Meaning:** Measures the cost of the full decode → modify → encode cycle.
 
-$timeJsonref = benchmark_jsonref($bigJson, $iterations);
-$timeDecodeEncode = benchmark_json_decode_encode($bigJson, $iterations);
+5. **benchJsonRefReadAndChange**
+   - **Action:** Reading and changing fields through reference functions.
+   - **Meaning:** checks the "read → changed" scenario without unnecessary operations.
 
-echo "jsonref time for $iterations iterations: {$timeJsonref} sec\n";
-echo "json_decode+json_encode time for $iterations iterations: {$timeDecodeEncode} sec\n";
+6. **benchJsonEncodeDecodeReadAndChange**
+    - **Action:** Full cycle: decoding, reading, changing, encoding.
 
-if ($timeJsonref < $timeDecodeEncode) {
-    $percentFaster = (($timeDecodeEncode - $timeJsonref) / $timeDecodeEncode) * 100;
-    echo "jsonref is faster by approximately " . round($percentFaster, 2) . "%\n";
-} else {
-    $percentSlower = (($timeJsonref - $timeDecodeEncode) / $timeJsonref) * 100;
-    echo "jsonref is slower by approximately " . round($percentSlower, 2) . "%\n";
-}
-```
+### Results and recommendations
 
-## Average result:
+### 1. Read-only (`benchJsonRefReadOnly` vs `benchJsonEncodeDecodeReadOnly`)
 
-```
-jsonref time for 10 iterations: 0.23355007171631 sec
-json_decode+json_encode time for 10 iterations: 0.55796909332275 sec
-jsonref is faster by approximately 58.14%
-```
+Reference:  0.077-0.080 ms <br>
+Decode:     0.150-0.159 ms
+
+**When to use the Reference:**
+- You often need to read random fields from a large JSON
+  API, where 90% of operations are data reads
+- Work with configurations, templates, cached structures
+
+**When to use Decode/Encode:**
+- Almost never for pure read — Reference it is always faster
+
+### 2. Change only (`benchJsonRefChangeOnly` vs `benchJsonEncodeDecodeChangeOnly`)
+
+Reference:  0.108-0.119 ms <br>
+Decode:     0.319-0.324 ms
+
+**When to use the Reference:**
+- Partial data update (patch operations)
+- High-load systems
+- Working with large JSON documents (10+ MB)
+
+**When to use Decode/Encode:**
+- If you need multiple changes to different fields at a time
+- If the JSON needs to be completely rebuilt anyway (different structure)
+- If the change affects >30% of the data (overhead depreciation)
+
+### 3. Read + Modify (`benchJsonRefReadAndChange` vs `benchJsonEncodeDecodeReadAndChange`)
+
+Reference:  0.175-0.184 ms <br>
+Decode:     0.481-0.497 ms
+
+**When to use the Reference:**
+- Counters, increments, complex calculations based on current values
+- Transactional operations with JSON (read → checked → changed)
+- The real world: 90% of the business logic is exactly like that
+
+**When to use Decode/Encode:**
+- If the logic requires access to multiple related fields
+- If you need to validate the integrity of the entire document
+- For complex queries (filtering, sorting, grouping)
+
+### Summary table of average time values (ms)
+
+| Test | Reference approach (`json_get`/`set`) | Decode/Encode approach | Difference | The winner |
+|------|-------------------------------------|----------------------|---------|-----------|
+| Read-only | 0.0786 ms | 0.1538 ms | ~2x faster | Reference |
+| Change only | 0.1112 ms | 0.3204 ms | ~3x faster | Reference |
+| Read + Modify | 0.1812 ms | 0.4886 ms | ~2.7x faster | Reference |
