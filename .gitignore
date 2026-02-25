@@ -6,3 +6,7 @@
 .idea
 .vscode
 /build
+/php/.*
+/php/vendor
+/php/composer.lock
+/cmake-build-debug
