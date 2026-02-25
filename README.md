@@ -39,12 +39,6 @@ Add to `php.ini`:
 extension=jsonref.so
 ```
 
-### Install from PECL
-
-```bash
-pecl install jsonref
-```
-
 ---
 
 ## Structure of functions
